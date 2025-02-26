@@ -1,6 +1,6 @@
 import { cloudflareDevProxyVitePlugin as remixCloudflareDevProxy, vitePlugin as remixVitePlugin } from '@remix-run/dev';
 import UnoCSS from 'unocss/vite';
-import { defineConfig, type ViteDevServer } from 'vite';
+import { defineConfig, type ConfigEnv, type UserConfig, type Plugin, type PluginOption } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { optimizeCssModules } from 'vite-plugin-optimize-css-modules';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -71,7 +71,7 @@ const getPackageJson = () => {
 const pkg = getPackageJson();
 const gitInfo = getGitInfo();
 
-export default defineConfig((config) => {
+export default defineConfig((config: ConfigEnv): UserConfig => {
   return {
     define: {
       __COMMIT_HASH: JSON.stringify(gitInfo.commitHash),
@@ -92,12 +92,59 @@ export default defineConfig((config) => {
     },
     build: {
       target: 'esnext',
+      chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000kb (1MB)
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            // AI SDK dependencies
+            if (id.includes('@ai-sdk/')) {
+              return 'vendor-ai-sdk';
+            }
+            
+            // CodeMirror dependencies
+            if (id.includes('@codemirror/')) {
+              return 'vendor-codemirror';
+            }
+            
+            // UI framework dependencies (Radix UI)
+            if (id.includes('@radix-ui/')) {
+              return 'vendor-radix-ui';
+            }
+            
+            // React and related core libraries
+            if (id.includes('react/') || 
+                id.includes('react-dom/') || 
+                id.includes('@remix-run/') ||
+                id.includes('react-router')) {
+              return 'vendor-react-core';
+            }
+            
+            // Utility libraries
+            if (id.includes('lodash') || 
+                id.includes('date-fns') || 
+                id.includes('uuid') ||
+                id.includes('zod')) {
+              return 'vendor-utils';
+            }
+            
+            // Other UI components and styling
+            if (id.includes('@headlessui/') || 
+                id.includes('tailwind') ||
+                id.includes('unocss') ||
+                id.includes('lucide-react')) {
+              return 'vendor-ui-components';
+            }
+            
+            return undefined;
+          },
+        },
+      },
     },
     plugins: [
       nodePolyfills({
         include: ['path', 'buffer', 'process'],
-      }),
-      config.mode !== 'test' && remixCloudflareDevProxy(),
+      } as any),
+      config.mode !== 'test' ? remixCloudflareDevProxy() : null,
       remixVitePlugin({
         future: {
           v3_fetcherPersist: true,
@@ -109,8 +156,8 @@ export default defineConfig((config) => {
       UnoCSS(),
       tsconfigPaths(),
       chrome129IssuePlugin(),
-      config.mode === 'production' && optimizeCssModules({ apply: 'build' }),
-    ],
+      config.mode === 'production' ? optimizeCssModules({ apply: 'build' }) : null,
+    ].filter(Boolean) as PluginOption[],
     envPrefix: [
       'VITE_',
       'OPENAI_LIKE_API_BASE_URL',
@@ -131,7 +178,7 @@ export default defineConfig((config) => {
 function chrome129IssuePlugin() {
   return {
     name: 'chrome129IssuePlugin',
-    configureServer(server: ViteDevServer) {
+    configureServer(server: import('vite').ViteDevServer) {
       server.middlewares.use((req, res, next) => {
         const raw = req.headers['user-agent']?.match(/Chrom(e|ium)\/([0-9]+)\./);
 
