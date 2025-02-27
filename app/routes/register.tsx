@@ -1,17 +1,25 @@
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs, type MetaFunction } from '@remix-run/cloudflare';
+import {
+  json,
+  redirect,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+  type MetaFunction,
+} from '@remix-run/cloudflare';
 import { Form, Link, useActionData, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef } from 'react';
-import { createUserSession, getUser, isEmailDomainAllowed } from '~/lib/auth/auth.server';
+import { createUserSession, getUser } from '~/lib/auth/auth.server';
 import BackgroundRays from '~/components/ui/BackgroundRays';
 import { z } from 'zod';
-import type { AuthConfig } from '~/types/auth';
 import type { Env } from '~/types/env';
+import mockKV from '~/lib/mocks/mockKV';
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Register | Bolt' }];
 };
 
-// Validate registration form data
+/**
+ * Validate registration form data
+ */
 const RegisterSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -19,89 +27,82 @@ const RegisterSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
 });
 
-// Define action data type
-type ActionData = 
-  | { errors: { 
-      email?: string[]; 
-      password?: string[]; 
-      firstName?: string[]; 
-      lastName?: string[];
-      _form?: string[];
-    } 
+/**
+ * Define action data type
+ */
+type ActionData = {
+  errors: {
+    email?: string[];
+    password?: string[];
+    firstName?: string[];
+    lastName?: string[];
+    _form?: string[];
   };
+};
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-  const env = context.env as Env;
+  const env = context.env as Env | undefined;
   const user = await getUser(request, env);
-  
-  // If user is already logged in, redirect to home
+
+  /**
+   * If user is already logged in, redirect to home
+   */
   if (user) {
     return redirect('/');
   }
-  
-  // Get the redirect URL from query params
+
+  /**
+   * Get the redirect URL from query params
+   */
   const url = new URL(request.url);
   const redirectTo = url.searchParams.get('redirectTo') || '/';
-  
-  // Get allowed domains from KV
-  let allowedDomains: string[] = [];
-  try {
-    if (env && env.boltKV) {
-      const authConfig = await env.boltKV.get('config', { type: 'json' as const }) as AuthConfig | null;
-      if (authConfig) {
-        allowedDomains = authConfig.allowedDomains;
-      }
-    } else {
-      console.log('boltKV is not available in the current environment, using default empty allowed domains');
-    }
-  } catch (error) {
-    console.error('Error fetching allowed domains:', error);
-  }
-  
-  return json({ redirectTo, allowedDomains });
+
+  return json({ redirectTo, allowedDomains: ['axiompursuits.com'] });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const env = context.env as Env;
+  const env = context.env as Env | undefined;
   const formData = await request.formData();
-  
+
   const email = formData.get('email')?.toString().toLowerCase();
   const password = formData.get('password')?.toString();
   const firstName = formData.get('firstName')?.toString();
   const lastName = formData.get('lastName')?.toString();
   const redirectTo = formData.get('redirectTo')?.toString() || '/';
-  
-  // Validate form data
+
+  /**
+   * Validate form data
+   */
   const result = RegisterSchema.safeParse({ email, password, firstName, lastName });
+
   if (!result.success) {
     return json({ errors: result.error.flatten().fieldErrors }, { status: 400 });
   }
-  
+
   try {
-    // Check if email domain is allowed
-    if (env && env.boltKV) {
-      const authConfig = await env.boltKV.get('config', { type: 'json' as const }) as AuthConfig | null;
-      const allowedDomains = authConfig?.allowedDomains || [];
-      
-      if (allowedDomains.length > 0 && !isEmailDomainAllowed(email!, allowedDomains)) {
-        return json({ 
-          errors: { 
-            email: [`Registration is only allowed for the following domains: ${allowedDomains.join(', ')}`] 
-          } 
-        }, { status: 403 });
-      }
-    }
-    
-    // Check if user already exists
+    /**
+     * Use boltKV for AUTH_USERS, fallback to mockKV if not available
+     */
+    const kvStore = (env && env.boltKV) || mockKV;
+
+    /**
+     * Check if user already exists
+     */
     const userKey = `user:${email}`;
-    const existingUser = await env.AUTH_USERS.get(userKey);
-    
+
+    /**
+     * Use boltKV for AUTH_USERS
+     */
+    const existingUser = await kvStore.get(userKey);
+
     if (existingUser) {
       return json({ errors: { email: ['User with this email already exists'] } }, { status: 400 });
     }
-    
-    // Create new user
-    // In a real app, you'd use a proper password hashing library
+
+    /**
+     * Create new user
+     * In a real app, you'd use a proper password hashing library
+     */
     const userData = {
       id: userKey,
       email,
@@ -111,10 +112,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
-    await env.AUTH_USERS.put(userKey, JSON.stringify(userData));
-    
-    // Create user session and redirect
+
+    /**
+     * Use boltKV for AUTH_USERS
+     */
+    await kvStore.put(userKey, JSON.stringify(userData));
+
+    /**
+     * Create user session and redirect
+     */
     return createUserSession(userKey, redirectTo);
   } catch (error: unknown) {
     console.error('Registration error:', error);
@@ -127,12 +133,12 @@ export default function Register() {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
-  
+
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
-  
+
   useEffect(() => {
     if (actionData?.errors?.firstName && actionData.errors.firstName.length > 0) {
       firstNameRef.current?.focus();
@@ -144,13 +150,13 @@ export default function Register() {
       passwordRef.current?.focus();
     }
   }, [actionData]);
-  
+
   const hasFirstNameError = actionData?.errors?.firstName && actionData.errors.firstName.length > 0;
   const hasLastNameError = actionData?.errors?.lastName && actionData.errors.lastName.length > 0;
   const hasEmailError = actionData?.errors?.email && actionData.errors.email.length > 0;
   const hasPasswordError = actionData?.errors?.password && actionData.errors.password.length > 0;
   const hasFormError = actionData?.errors?._form && actionData.errors._form.length > 0;
-  
+
   return (
     <div className="flex flex-col h-full w-full dark:bg-bolt-elements-bg-depth-1">
       <BackgroundRays />
@@ -168,18 +174,16 @@ export default function Register() {
               </p>
             )}
           </div>
-          
+
           <Form method="post" className="mt-8 space-y-6">
             <input type="hidden" name="redirectTo" value={redirectTo} />
-            
+
             {hasFormError && (
               <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-md">
-                {actionData?.errors?._form?.map((error: string) => (
-                  <p key={error}>{error}</p>
-                ))}
+                {actionData?.errors?._form?.map((error: string) => <p key={error}>{error}</p>)}
               </div>
             )}
-            
+
             <div className="rounded-md shadow-sm space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -204,7 +208,7 @@ export default function Register() {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <label htmlFor="lastName" className="block text-sm font-medium text-bolt-elements-textSecondary">
                     Last name
@@ -228,7 +232,7 @@ export default function Register() {
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-bolt-elements-textSecondary">
                   Email address
@@ -245,13 +249,11 @@ export default function Register() {
                     bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary focus:outline-none focus:ring-bolt-elements-focus focus:border-bolt-elements-focus dark:bg-bolt-elements-bg-depth-1 dark:text-bolt-elements-textPrimary"
                   />
                   {hasEmailError && (
-                    <div className="pt-1 text-red-500 dark:text-red-400 text-sm">
-                      {actionData?.errors?.email?.[0]}
-                    </div>
+                    <div className="pt-1 text-red-500 dark:text-red-400 text-sm">{actionData?.errors?.email?.[0]}</div>
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-bolt-elements-textSecondary">
                   Password
@@ -275,17 +277,17 @@ export default function Register() {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-bolt-elements-accent hover:bg-bolt-elements-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-focus disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium bg-bolt-elements-accent hover:bg-bolt-elements-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-focus disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white"
               >
                 {isSubmitting ? 'Creating account...' : 'Create account'}
               </button>
             </div>
-            
+
             <div className="flex items-center justify-center">
               <div className="text-sm">
                 <Link to="/login" className="font-medium text-bolt-elements-accent hover:text-bolt-elements-accent/90">

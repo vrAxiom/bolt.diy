@@ -6,14 +6,18 @@
 // Simple in-memory storage
 const memoryStore = new Map<string, string>();
 
-export class MockKV implements KVNamespace {
-  constructor(public readonly id: string = 'boltKV') {}
+// Create a simpler implementation that doesn't try to match the exact interface
+export class MockKV {
+  constructor(private readonly _id: string = 'boltKV') {}
 
   // Basic KV operations
-  async get(key: string, options?: KVNamespaceGetOptions<any>): Promise<any> {
+  async get(key: string, options?: any): Promise<any> {
     const value = memoryStore.get(key);
-    if (value === undefined) return null;
-    
+
+    if (value === undefined) {
+      return null;
+    }
+
     if (options?.type === 'json' && value) {
       try {
         return JSON.parse(value);
@@ -21,48 +25,69 @@ export class MockKV implements KVNamespace {
         console.error(`Failed to parse JSON for key ${key}`, e);
         return null;
       }
+    } else if (options === 'json' && value) {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        console.error(`Failed to parse JSON for key ${key}`, e);
+        return null;
+      }
+    } else if (options === 'arrayBuffer' && value) {
+      // Mock implementation for arrayBuffer
+      const encoder = new TextEncoder();
+      return encoder.encode(value).buffer;
+    } else if (options === 'stream' && value) {
+      // Mock implementation for stream
+      const encoder = new TextEncoder();
+      const uint8Array = encoder.encode(value);
+
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(uint8Array);
+          controller.close();
+        },
+      });
     }
-    
+
     return value;
   }
 
-  async put(key: string, value: string | ReadableStream | ArrayBuffer, options?: KVNamespacePutOptions): Promise<void> {
+  async put(key: string, value: string | ReadableStream | ArrayBuffer, _options?: any): Promise<void> {
     let valueToStore: string;
-    
-    if (typeof value === 'string') {
-      valueToStore = value;
-    } else if (value instanceof ArrayBuffer) {
-      valueToStore = new TextDecoder().decode(value);
-    } else if (value instanceof ReadableStream) {
-      // Convert ReadableStream to text
+
+    if (value instanceof ReadableStream) {
+      // Convert ReadableStream to string
       const reader = value.getReader();
       const chunks: Uint8Array[] = [];
-      
-      let done = false;
-      while (!done) {
-        const { value: chunk, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (chunk) chunks.push(chunk);
+
+      while (true) {
+        const { done, value: chunk } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        chunks.push(chunk);
       }
-      
-      const allBytes = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
+
+      const allChunks = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
       let offset = 0;
+
       for (const chunk of chunks) {
-        allBytes.set(chunk, offset);
+        allChunks.set(chunk, offset);
         offset += chunk.length;
       }
-      
-      valueToStore = new TextDecoder().decode(allBytes);
+
+      const decoder = new TextDecoder();
+      valueToStore = decoder.decode(allChunks);
+    } else if (value instanceof ArrayBuffer) {
+      // Convert ArrayBuffer to string
+      const decoder = new TextDecoder();
+      valueToStore = decoder.decode(new Uint8Array(value));
     } else {
-      // Fallback for any other type
-      try {
-        valueToStore = JSON.stringify(value);
-      } catch (e) {
-        console.error('Failed to stringify value', e);
-        throw new Error('Unsupported value type');
-      }
+      valueToStore = value;
     }
-    
+
     memoryStore.set(key, valueToStore);
   }
 
@@ -71,22 +96,27 @@ export class MockKV implements KVNamespace {
   }
 
   // Additional methods required by KVNamespace interface
-  async list(options?: KVNamespaceListOptions): Promise<KVNamespaceListResult<unknown>> {
+  async list(options?: any): Promise<any> {
     const keys = Array.from(memoryStore.keys())
-      .filter(key => options?.prefix ? key.startsWith(options.prefix) : true)
-      .map(name => ({ name }));
-      
+      .filter((key) => (options?.prefix ? key.startsWith(options.prefix) : true))
+      .map((name) => ({ name }));
+
     return {
       keys: keys.slice(0, options?.limit ?? 1000),
       list_complete: true,
-      cursor: '',
+      cacheStatus: null,
     };
   }
 
   // Additional methods to match CF KV
-  async getWithMetadata(key: string, options?: KVNamespaceGetWithMetadataOptions<any>): Promise<KVNamespaceGetWithMetadataResult<any>> {
+  async getWithMetadata(key: string, options?: any): Promise<any> {
     const value = await this.get(key, options);
-    return { value, metadata: null };
+
+    return {
+      value,
+      metadata: null,
+      cacheStatus: null,
+    };
   }
 }
 

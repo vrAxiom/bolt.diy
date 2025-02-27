@@ -6,7 +6,7 @@ import mockKV from './mockKV';
  */
 export async function setupMockData() {
   console.log('Setting up mock data for local development...');
-  
+
   // Create test user - simple password for development only
   const testUser = {
     id: 'test-user-123',
@@ -14,23 +14,24 @@ export async function setupMockData() {
     name: 'Test User',
     roles: ['user'],
     createdAt: new Date().toISOString(),
+
     // Use plain text password for easier development testing
-    password: 'password123'
+    password: 'password123',
   };
 
   // Add test user to KV
   await mockKV.put(`user:${testUser.email}`, JSON.stringify(testUser));
-  
+
   // Set allowed domains for authentication
   const allowedDomains = ['example.com'];
   await mockKV.put('allowedDomains', JSON.stringify(allowedDomains));
-  
+
   // Set auth config
   const authConfig = {
-    requireAuth: false // Set to false for easier testing
+    requireAuth: false, // Set to false for easier testing
   };
   await mockKV.put('config', JSON.stringify(authConfig));
-  
+
   console.log('✅ Mock data initialized successfully');
   console.log('📝 Test user credentials: test@example.com / password123');
 }
@@ -41,6 +42,6 @@ if (typeof window !== 'undefined') {
   setTimeout(() => {
     setupMockData()
       .then(() => console.log('✨ Mock KV environment ready for local development'))
-      .catch(err => console.error('❌ Failed to setup mock data:', err));
+      .catch((err) => console.error('❌ Failed to setup mock data:', err));
   }, 100);
 }

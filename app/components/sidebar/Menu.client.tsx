@@ -11,9 +11,7 @@ import { logger } from '~/utils/logger';
 import { HistoryItem } from './HistoryItem';
 import { binDates } from './date-binning';
 import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
-import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
-import { profileStore } from '~/lib/stores/profile';
 import { userStore } from '~/lib/stores/user';
 import { Form } from '@remix-run/react';
 
@@ -40,49 +38,25 @@ const menuVariants = {
 
 type DialogContent = { type: 'delete'; item: ChatHistoryItem } | null;
 
-function CurrentDateTime() {
-  const [dateTime, setDateTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDateTime(new Date());
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-2 text-sm text-bolt-elements-textSecondary border-b border-bolt-elements-borderColor">
-      <div className="h-4 w-4 i-ph:clock opacity-80" />
-      <div className="flex gap-2">
-        <span>{dateTime.toLocaleDateString()}</span>
-        <span>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-      </div>
-    </div>
-  );
-}
-
 export const Menu = () => {
   const { duplicateCurrentChat, exportChat } = useChatHistory();
   const menuRef = useRef<HTMLDivElement>(null);
   const [list, setList] = useState<ChatHistoryItem[]>([]);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const profile = useStore(profileStore);
   const { user, isAuthenticated } = useStore(userStore);
 
-  const { searchQuery, filteredItems, handleSearchChange } = useSearchFilter({
+  // Fix the useSearchFilter call by providing the required items parameter
+  const { filteredItems, searchQuery, handleSearchChange } = useSearchFilter({
     items: list,
     searchFields: ['description'],
   });
 
-  const handleSearchInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleSearchChange(e);
-    },
-    [handleSearchChange],
-  );
+  // Function to handle search input change
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleSearchChange(e);
+  };
 
   const loadEntries = useCallback(() => {
     if (db) {
@@ -137,11 +111,6 @@ export const Menu = () => {
     loadEntries(); // Reload the list after duplication
   };
 
-  const handleSettingsClick = () => {
-    setIsSettingsOpen(true);
-    setOpen(false);
-  };
-
   const handleSettingsClose = () => {
     setIsSettingsOpen(false);
   };
@@ -160,13 +129,9 @@ export const Menu = () => {
             <div
               onClick={toggleSidebar}
               className={`i-ph:sidebar-simple-duotone text-xl text-gray-200 hover:text-bolt-elements-accent transition-colors ${open ? 'rotate-0' : 'rotate-180'}`}
-              title={open ? "Collapse sidebar" : "Expand sidebar"}
+              title={open ? 'Collapse sidebar' : 'Expand sidebar'}
             />
-            {open && (
-              <span className="text-lg font-medium text-bolt-elements-textPrimary">
-                Menu
-              </span>
-            )}
+            {open && <span className="text-lg font-medium text-bolt-elements-textPrimary">Menu</span>}
           </div>
           {open && (
             <div className="flex items-center">
@@ -180,15 +145,18 @@ export const Menu = () => {
           <div className="flex items-center justify-between p-4 border-b border-bolt-elements-borderColor">
             <div className="flex items-center space-x-2">
               <div className="h-10 w-10 rounded-full bg-bolt-elements-accent flex items-center justify-center text-white font-medium">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName[0]}
+                {user.lastName[0]}
               </div>
               <div>
-                <div className="font-medium text-bolt-elements-textPrimary">{user.firstName} {user.lastName}</div>
+                <div className="font-medium text-bolt-elements-textPrimary">
+                  {user.firstName} {user.lastName}
+                </div>
                 <div className="text-xs text-bolt-elements-textSecondary">{user.email}</div>
               </div>
             </div>
             <Form action="/logout" method="post">
-              <button 
+              <button
                 type="submit"
                 className="p-1.5 hover:bg-bolt-elements-background-depth-3 rounded text-gray-300"
                 title="Logout"
@@ -200,8 +168,8 @@ export const Menu = () => {
         ) : open ? (
           <div className="flex items-center justify-between p-4 border-b border-bolt-elements-borderColor">
             <div className="text-bolt-elements-textSecondary">Guest User</div>
-            <a 
-              href="/login" 
+            <a
+              href="/login"
               className="px-3 py-1.5 bg-bolt-elements-accent text-white rounded-md text-sm hover:bg-bolt-elements-accent/90"
             >
               Sign In
@@ -219,6 +187,7 @@ export const Menu = () => {
                   autoComplete="off"
                   className="block w-full py-2 pl-9 pr-3 bg-bolt-elements-background-depth-1 rounded border border-bolt-elements-borderColor focus:border-bolt-elements-focus focus:ring-bolt-elements-focus focus:outline-none text-bolt-elements-textPrimary placeholder:text-bolt-elements-textSecondary transition duration-150 ease-in-out leading-normal text-sm"
                   onChange={handleSearchInputChange}
+                  value={searchQuery}
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <div className="i-ph:magnifying-glass text-lg text-gray-300 opacity-90" />
@@ -295,10 +264,6 @@ export const Menu = () => {
                   </Dialog>
                 </DialogRoot>
               </div>
-              <div className="flex items-center justify-between border-t border-bolt-elements-borderColor px-4 py-3">
-                <SettingsButton onClick={handleSettingsClick} />
-                <ThemeSwitch />
-              </div>
             </div>
           </>
         )}
@@ -308,16 +273,27 @@ export const Menu = () => {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="fixed top-0 left-0 h-full w-12 bg-bolt-elements-background-depth-2 border-r border-bolt-elements-borderColor flex flex-col items-center pt-5 cursor-pointer hover:bg-bolt-elements-background-depth-3 transition-colors z-10 group"
+          className="fixed top-0 left-0 h-full w-12 bg-bolt-elements-background-depth-2 border-r border-bolt-elements-borderColor flex flex-col items-center cursor-pointer hover:bg-bolt-elements-background-depth-3 transition-colors z-10 group"
           onClick={toggleSidebar}
           title="Expand sidebar"
         >
-          <div
-            className="i-ph:sidebar-simple-duotone text-xl text-gray-200 group-hover:text-bolt-elements-accent transition-colors rotate-180"
-          />
-          <div className="mt-4 text-gray-200 group-hover:text-bolt-elements-accent text-xs font-medium transition-colors" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-            Open Menu
+          {/* Add a spacer at the top to prevent overlap with logo */}
+          <div className="h-20"></div>
+
+          {/* Move both the icon and text to the bottom with more padding */}
+          <div className="absolute bottom-32 left-0 w-full flex justify-center">
+            <div className="i-ph:sidebar-simple-duotone text-xl text-gray-200 group-hover:text-bolt-elements-accent transition-colors rotate-180" />
           </div>
+
+          <div className="absolute bottom-16 left-0 w-full flex justify-center">
+            <div
+              className="text-gray-200 group-hover:text-bolt-elements-accent text-xs font-medium transition-colors"
+              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+            >
+              Open Menu
+            </div>
+          </div>
+
           <div className="absolute top-0 right-0 h-full w-1 bg-transparent group-hover:bg-bolt-elements-accent transition-colors"></div>
         </motion.div>
       )}

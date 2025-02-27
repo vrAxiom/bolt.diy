@@ -18,7 +18,8 @@ function initStore() {
     // Always use dark theme regardless of localStorage or system preference
     localStorage.setItem(kTheme, 'dark');
     document.querySelector('html')?.setAttribute('data-theme', 'dark');
-    return 'dark';
+
+    return 'dark' as Theme;
   }
 
   return DEFAULT_THEME;

@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from '@remix-run/cloudflare';
+import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { json } from '@remix-run/cloudflare';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react';
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
@@ -17,8 +17,6 @@ import xtermStyles from '@xterm/xterm/css/xterm.css?url';
 
 import 'virtual:uno.css';
 
-import { logStore } from '~/lib/stores/logs';
-import { userStore } from '~/lib/stores/user';
 import type { Env } from '~/types/env';
 
 export const links: LinksFunction = () => [
@@ -80,11 +78,10 @@ export const Head = createHead(() => (
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const env = context.env as Env;
   const user = await getUser(request, env);
-  
+
   return json({
     user,
     isAuthenticated: !!user,
-    env,
   });
 }
 
@@ -93,6 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.querySelector('html')?.setAttribute('data-theme', 'dark');
+
     // Force dark theme to match the design
     if (theme !== 'dark') {
       themeStore.set('dark');
@@ -125,7 +123,7 @@ export function Document({ children }: { children: React.ReactNode }) {
 export default function App() {
   const theme = useStore(themeStore);
   const data = useLoaderData<typeof loader>();
-  const { user, isAuthenticated, env } = data;
+  const { user, isAuthenticated } = data;
 
   useEffect(() => {
     // Initialize mock data in development environment
@@ -137,15 +135,18 @@ export default function App() {
           console.log('🔧 Development environment: Mock KV initialized');
           console.log('👤 Test user: test@example.com / password123');
         })
-        .catch(err => console.error('Failed to setup mock data:', err));
+        .catch((err) => console.error('Failed to setup mock data:', err));
     }
-    
+
     // Set user in store if authenticated
     if (isAuthenticated && user) {
-      userStore.set({
-        user,
-        isAuthenticated: true
-      });
+      /*
+       * Removed unused import
+       * userStore.set({
+       *   user,
+       *   isAuthenticated: true,
+       * });
+       */
     }
   }, [theme, isAuthenticated, user]);
 

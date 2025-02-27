@@ -1,7 +1,9 @@
 import { atom } from 'nanostores';
 import type { User } from '~/types/auth';
 
-// User store to manage the current authenticated user
+/*
+ * User store to manage the current authenticated user
+ */
 interface UserState {
   user: User | null;
   isAuthenticated: boolean;
@@ -28,6 +30,8 @@ export function clearUser() {
   userStore.set(initialState);
 }
 
-// Add store methods directly to the store object
-userStore.setUser = setUser;
-userStore.clearUser = clearUser;
+/*
+ * Don't add methods directly to the store object
+ * userStore.setUser = setUser;
+ * userStore.clearUser = clearUser;
+ */

@@ -24,7 +24,7 @@ export function Header() {
           <img src="/logo-dark-styled.png" alt="logo" className="w-[120px] inline-block hidden dark:block" />
         </a>
       </div>
-      
+
       <div className="flex-1 flex items-center justify-center">
         {chat.started && (
           <span className="px-4 py-1 truncate text-center text-bolt-elements-textPrimary bg-bolt-elements-background-depth-2 rounded-full">
@@ -32,18 +32,18 @@ export function Header() {
           </span>
         )}
       </div>
-      
+
       <div className="flex items-center gap-3">
         {isAuthenticated && (
-          <Link 
-            to="/admin" 
+          <Link
+            to="/admin"
             className="text-bolt-elements-textPrimary hover:text-bolt-elements-accent transition-colors"
             title="Admin"
           >
             <div className="i-ph:gear-six text-xl" />
           </Link>
         )}
-        
+
         {chat.started && (
           <ClientOnly>
             {() => (
