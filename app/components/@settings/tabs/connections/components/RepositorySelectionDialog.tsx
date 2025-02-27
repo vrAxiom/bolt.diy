@@ -469,7 +469,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
                 Search
               </TabButton>
               <TabButton active={activeTab === 'url'} onClick={() => setActiveTab('url')}>
-                <span className="i-ph:link" />
+                <span className="i-bolt:link" />
                 URL
               </TabButton>
             </div>

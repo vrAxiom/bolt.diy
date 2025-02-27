@@ -264,7 +264,7 @@ const CloudProvidersTab = () => {
                             onClick={() => setEditingProvider(provider.name)}
                           >
                             <div className="flex items-center gap-2 text-bolt-elements-textSecondary">
-                              <div className="i-ph:link text-sm" />
+                              <div className="i-bolt:link text-sm" />
                               <span className="group-hover/url:text-purple-500 transition-colors">
                                 {provider.settings.baseUrl || 'Click to set base URL'}
                               </span>

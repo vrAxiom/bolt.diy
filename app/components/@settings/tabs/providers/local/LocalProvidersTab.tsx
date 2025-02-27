@@ -515,7 +515,7 @@ export default function LocalProvidersTab() {
                           )}
                         >
                           <div className="flex items-center gap-2 text-bolt-elements-textSecondary">
-                            <div className="i-ph:link text-sm" />
+                            <div className="i-bolt:link text-sm" />
                             <span>{provider.settings.baseUrl || OLLAMA_API_URL}</span>
                           </div>
                         </div>
@@ -733,7 +733,7 @@ export default function LocalProvidersTab() {
                               )}
                             >
                               <div className="flex items-center gap-2 text-bolt-elements-textSecondary">
-                                <div className="i-ph:link text-sm" />
+                                <div className="i-bolt:link text-sm" />
                                 <span>{provider.settings.baseUrl || 'Click to set base URL'}</span>
                               </div>
                             </div>

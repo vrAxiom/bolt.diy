@@ -92,6 +92,7 @@ const COLOR_PRIMITIVES = {
   alpha: {
     white: generateAlphaPalette(BASE_COLORS.white),
     gray: generateAlphaPalette(BASE_COLORS.gray[900]),
+    'gray-950': generateAlphaPalette(BASE_COLORS.gray[950]),
     red: generateAlphaPalette(BASE_COLORS.red[500]),
     accent: generateAlphaPalette(BASE_COLORS.accent[500]),
   },
@@ -238,11 +239,19 @@ export default defineConfig({
       },
     }),
     presetIcons({
-      warn: true,
+      scale: 1.2,
       collections: {
-        ...customIconCollection,
+        bolt: customIconCollection.bolt,
+        ph: async () => {
+          // Dynamic import of the Phosphor icons from @iconify-json/ph
+          const { icons } = await import('@iconify-json/ph');
+          return icons;
+        },
       },
-      unit: 'em',
+      extraProperties: {
+        'display': 'inline-block',
+        'vertical-align': 'middle',
+      },
     }),
   ],
 });
@@ -264,7 +273,7 @@ export default defineConfig({
  * ```
  */
 function generateAlphaPalette(hex: string) {
-  return [1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].reduce(
+  return [1, 2, 3, 4, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100].reduce(
     (acc, opacity) => {
       const alpha = Math.round((opacity / 100) * 255)
         .toString(16)

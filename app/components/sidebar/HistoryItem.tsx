@@ -59,7 +59,7 @@ export function HistoryItem({ item, onDelete, onDuplicate, exportChat }: History
               { 'bg-gray-50/80 dark:bg-gray-800/30': isActiveChat },
             )}
           >
-            <div className="flex items-center gap-2.5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2.5 text-gray-300 dark:text-gray-300 opacity-100 transition-opacity">
               <ChatActionButton
                 toolTipContent="Export"
                 icon="i-ph:download-simple h-4 w-4"
@@ -123,7 +123,7 @@ const ChatActionButton = forwardRef(
         <button
           ref={ref}
           type="button"
-          className={`text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 transition-colors ${icon} ${className ? className : ''}`}
+          className={`text-gray-300 dark:text-gray-300 hover:text-purple-500 dark:hover:text-purple-400 transition-colors ${icon} ${className ? className : ''}`}
           onClick={onClick}
         />
       </WithTooltip>

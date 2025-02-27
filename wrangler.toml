@@ -4,3 +4,8 @@ compatibility_flags = ["nodejs_compat"]
 compatibility_date = "2024-07-01"
 pages_build_output_dir = "./build/client"
 send_metrics = false
+
+# KV Namespaces for authentication
+kv_namespaces = [
+  { binding = "boltKV", id = "cf8c3cb427614c0c974d776dc28dbf34", preview_id = "boltKV" }
+]

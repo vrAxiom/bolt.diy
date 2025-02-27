@@ -1,8 +1,8 @@
 .rayContainer {
-  // Theme-specific colors
-  --ray-color-primary: color-mix(in srgb, var(--primary-color), transparent 30%);
-  --ray-color-secondary: color-mix(in srgb, var(--secondary-color), transparent 30%);
-  --ray-color-accent: color-mix(in srgb, var(--accent-color), transparent 30%);
+  // Theme-specific colors for dark blue theme
+  --ray-color-primary: rgba(29, 67, 115, 0.6);
+  --ray-color-secondary: rgba(25, 52, 89, 0.6);
+  --ray-color-accent: rgba(35, 84, 140, 0.6);
 
   // Theme-specific gradients
   --ray-gradient-primary: radial-gradient(var(--ray-color-primary) 0%, transparent 70%);
@@ -15,10 +15,10 @@
   animation: fadeIn 1.5s ease-out;
   pointer-events: none;
   z-index: 0;
-  //   background-color: transparent;
 
   :global(html[data-theme='dark']) & {
-    mix-blend-mode: screen;
+    mix-blend-mode: lighten;
+    opacity: 0.6;
   }
 
   :global(html[data-theme='light']) & {
